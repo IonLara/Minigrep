@@ -6,9 +6,9 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(config.file_path)?;
 
     let results = if config.ignore_case {
-        search_case_insensitive(&config.query, &contents)
+        search_case_insensitive(config.query, &contents)
     } else {
-        search(&config.query, &contents)
+        search(config.query, &contents)
     };
 
     for line in results {
@@ -18,8 +18,16 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+pub fn parse_query(query: String) -> Vec<String> {
+    let mut queries = Vec::new();
+    for word in query.split("|") {
+        queries.push(String::from(word));
+    }
+    queries
+}
+
 pub struct Config {
-    pub query: String,
+    pub query: Vec<String>,
     pub file_path: String,
     pub ignore_case: bool,
 }
@@ -29,7 +37,9 @@ impl Config {
         if args.len() < 3 {
             return Err("not enough arguments");
         }
+
         let query = args[1].clone();
+        let query = parse_query(query);
         let file_path = args[2].clone();
         // let ignore_case = env::var("IGNORE_CASE").is_ok();
         let ignore_case = if args.len() < 4 {
@@ -46,25 +56,29 @@ impl Config {
     }
 }
 
-pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+pub fn search<'a>(queries: Vec<String>, contents: &'a str) -> Vec<String> {
     let mut results = Vec::new();
 
-    for line in contents.lines() {
-        if line.contains(query) {
-            results.push(line);
+    for query in queries {
+        for (i, line) in contents.lines().enumerate() {
+            if line.contains(&query) {
+                results.push(format!("{i} {line}"));
+            }
         }
     }
 
     results
 }
 
-pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
-    let query = query.to_lowercase();
+pub fn search_case_insensitive<'a>(queries: Vec<String>, contents: &'a str) -> Vec<String> {
     let mut results = Vec::new();
 
-    for line in contents.lines() {
-        if line.to_lowercase().contains(&query) {
-            results.push(line);
+    for query in queries {
+        let query = query.to_lowercase();
+        for (i, line) in contents.lines().enumerate() {
+            if line.to_lowercase().contains(&query) {
+                results.push(format!("{i} {line}"));
+            }
         }
     }
 
@@ -76,8 +90,15 @@ mod tests {
     use super::*;
 
     #[test]
+    fn multiple() {
+        let query = String::from("duct|rust");
+
+        assert_eq!(vec!["duct", "rust"], parse_query(query));
+    }
+
+    #[test]
     fn case_sensitive() {
-        let query = "duct";
+        let query = vec![String::from("duct")];
         let contents = "\
 Rust:
 safe, fast, productive.
@@ -89,7 +110,7 @@ Duct tape.";
 
     #[test]
     fn case_insensitive() {
-        let query = "rUsT";
+        let query = vec![String::from("rUsT")];
         let contents = "\
 Rust:
 safe, fast, productive.
@@ -104,7 +125,7 @@ Trust me.";
 
     #[test]
     fn one_result() {
-        let query = "duct";
+        let query = vec![String::from("duct")];
         let contents = "\
 Rust:
 safe, fast, productive.
