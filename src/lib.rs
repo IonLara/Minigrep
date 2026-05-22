@@ -3,6 +3,7 @@ use std::env;
 use std::error::Error;
 use std::fs;
 
+/// Main function to run the program after collenting arguments
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(config.file_path)?;
 
@@ -19,6 +20,8 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// Splits the differet 'queries' from the program arguments.
+/// Returns an array with the queries
 pub fn parse_query(query: String) -> Vec<String> {
     let mut queries = Vec::new();
     for word in query.split("|") {
@@ -27,6 +30,7 @@ pub fn parse_query(query: String) -> Vec<String> {
     queries
 }
 
+/// Main Configuration struct to define program behaviour
 pub struct Config {
     pub query: Vec<String>,
     pub file_path: String,
@@ -34,6 +38,8 @@ pub struct Config {
 }
 
 impl Config {
+    /// Builder Method to try and construct a valid Configuration
+    /// Returns the configuration for search or an error
     pub fn build(args: &[String]) -> Result<Config, &'static str> {
         if args.len() < 3 {
             return Err("not enough arguments");
@@ -56,10 +62,14 @@ impl Config {
     }
 }
 
+/// Function to add color to the queried sections of the output.
+/// Returns the colorized String.
 pub fn colorize(query: &str, line: &str) -> String {
     line.replace(query, &query.green().to_string())
 }
 
+/// Case Sensitive Search funtion to find all the lines that include a query.
+/// Returns an array with all lines that include the query.
 pub fn search<'a>(queries: Vec<String>, contents: &'a str) -> Vec<String> {
     let mut results = Vec::new();
 
@@ -75,6 +85,8 @@ pub fn search<'a>(queries: Vec<String>, contents: &'a str) -> Vec<String> {
     results
 }
 
+/// Case Insensitive Search function to find all the lines that include a query, regardless of Lowercase or Uppercase.
+/// Returns an array with all lines that include the query.
 pub fn search_case_insensitive<'a>(queries: Vec<String>, contents: &'a str) -> Vec<String> {
     let mut results = Vec::new();
 
